@@ -1,4 +1,4 @@
-<h1> popharvest package in R</h1>
+<h1> popharvest : An R package to assess the sustainability of harvesting regimes of bird populations </h1>
 
 
 Made by Tiphaine DEVAUX, Maxime LAHOURNAT, Alexandre VILLERS, Cyril ERAUD, Charlotte FRANCESIAZ
