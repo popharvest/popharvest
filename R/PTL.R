@@ -1,0 +1,971 @@
+#' Prescribed Take Level estimation
+#'
+#' @description
+#' \code{PTL} is a function used to calculate the prescribed take level of a species, see 'Details'.
+#'
+#'
+#' @details
+#' Calculates the Prescribed Take Level (PTL) integrating a density-dependance parameter and Sustainability Harvest Index (SHI).
+#'
+#' PTL is the maximum number of animals which may be removed from a population while allowing it to
+#' reach or maintain equilibrium to a certain level of its carrying capacity. The PTL formula is
+#' \eqn{Fobj.(Rmax.theta)/(1+theta)} for a breeding population.
+#'
+#'
+#' Fobj (\code{Fobj} argument) is a factor that reflects management objectives of the decision-maker. It is related to
+#' the desired long-term population size relative to the carrying capacity (Runge et al. 2009). For example,
+#' a factor of 0.25 means that 25% of the maximum sustainable yield is taken.
+#'
+#'
+#' Rmax is the maximum annual recruitment rate estimation. This is equivalent to the maximum annual population
+#' growth rate, lambdaMax, under optimal growth conditions. Rmax and lambdaMax can be provided by either a point estimates (\code{Rmax.fixed}, \code{lambdaMax.fixed}) or a normal distribution (\code{Rmax.norm = TRUE}
+#' with \code{mean.Rmax} and \code{sd.Rmax}, \code{lambdaMax = TRUE} with \code{mean.lambdaMax} and \code{sd.lambdaMax}). When Rmax (or lambdaMax) is unknown from the user,
+#' the value is calculated using the demographic invariants
+#' approach (Niel & Lebreton 2005). This approach calculates \eqn{Rmax = lambda max – 1} on the basis of 2 parameters:
+#' adult survival rate and age at first breeding. When adult survival and age at first reproduction are known
+#' from the user, they can be provided by either point estimates (\code{surv.fixed}, \code{alpha.fixed} arguments) or distributions (\code{surv.norm = TRUE} with \code{mean.surv} and \code{sd.surv},
+#' \code{alpha.unif = TRUE} with \code{min.alpha} and \code{max.alpha}, \code{alpha.norm = TRUE} with \code{mean.alpha} and \code{sd.alpha} arguments). Also,
+#' survival rate can be estimated from body mass following the relationship described in Johnson et al. (2012) : \eqn{p^(1/(exp(3.22+0.24*log(body mass)+e)-1))}.
+#' In this case, body mass can be provided as either a point estimate (\code{mass.fixed})
+#' or a normal distribution (\code{mass.norm = TRUE}, \code{mean.mass} and \code{sd.mass} arguments). The parameter p can be provided by either from a beta distribution
+#' B(3.34, 101.24) (\code{type.p = "random"}) or a point estimate equal to 0.032 (i.e. the mean of the beta distribution is given by a/(a + b) with a = 3.34 and b = 101.24, Boitani & Fuller 2000) (\code{type.p = "determinist"})
+#' The parameter e can also be either null (\code{type.e = "determinist"}) or residuals from a normal distribution N(0, 0.087) (\code{type.e = "random"}).
+#'
+#'
+#' In all cases,  the type of living rate (\code{living.rate} argument), i.e. long-lived species (\code{living.rate = "long"}) or short-lived species (\code{living.rate = "short"}) must be quoted. Long-lived species,
+#' unlike short-lived species, are those that do not have a strategy to maximize reproduction, i.e. those with high adult survival, low brood size,
+#' and high first-generation age. This argument is used to select the right formula from Niel & Lebreton (2005) for the calculation of lambdaMax
+#' and, therefater Rmax.
+#'
+#'
+#' The population size, as the previous terms, can also be provided by either a point estimates (\code{pop.fixed}) or distributions (\code{pop.unif = TRUE}
+#' with \code{min.pop} and \code{max.pop} or \code{pop.norm = TRUE} with \code{mean.pop} and \code{sd.pop}).
+#'
+#' Theta is a shape parameter describing the form of density dependence. It can be provided by either a point estimates (\code{theta.fixed}). If
+#' the value of theta is unknown, it can be estimated from Rmax following the relationship described in Johnson et al (2012) :
+#' \eqn{exp(1.129-1.824*Rmax+e)}, where e is either residuals of the underlying relationship at their means (i.e. 0) (\code{estim.theta = "determinist"}) or
+#' residuals from normal distribution N(0, 0.942) (\code{estim.theta = "random"}.
+#'
+#'
+#' The Sustainability Harvest Index or SHI. It is the harvest level expressed as a proportion relative to PTL: \eqn{harvest level/PTL}. The harvest level can
+#' be provided by a point estimates (\code{harvest.fixed}) or distributions (\code{harvest.unif = TRUE}
+#' with \code{min.harvest} and \code{max.harvest} or \code{harvest.norm = TRUE} with \code{mean.harvest} and \code{sd.harvest}).
+#' When harvest exceeds PTL, this suggests an overexploitation regime according a fixed management objective.
+#'
+#'
+#' The function PEG provides a great flexibility of use according the known arguments and analysis that the user wants realize.
+#' Fixed demographic parameters or different distribution types can be integrated in the function. This later approach enables uncertainty
+#' to be taken into account.
+#'
+#'
+#' For more details for the function use see 'README' documentation.
+#'
+#' @param full.option boolean, default \code{FALSE}. If \code{TRUE}, provides all parameter values necessary for calculations.
+#' @param Nsim number, default 1 ;  number of simulations.
+#' @param NSp number ; number of species for which calculations are done.
+#' @param Rmax.fixed number ; fixed estimate of maximum annual growth rate provided by the user. To be used instead of \code{mean.Rmax} when \code{Rmax.norm = FALSE}.
+#' @param Rmax.norm boolean, default \code{FALSE}. If \code{TRUE}, simulates Rmax for a normal distribution with mu = \code{mean.Rmax} and standard deviation = \code{sd.Rmax}.
+#' @param mean.Rmax number ; marithmetic mean of maximum annual growth rate.
+#' @param sd.Rmax number ; standard deviation of maximum annual growth rate.
+#' @param lambdaMax.fixed number ; fixed estimate of maximum multiplicative growth rate provided by the user and used to calculate Rmax as \eqn{lambdaMax – 1}.
+#' @param lambdaMax.norm boolean, default \code{FALSE}. If \code{TRUE}, simulates maximum mulitplicative growth rate from a normal distribution with mu = \code{mean.lambdaMax} and standard deviation = \code{sd.lambdaMax}.
+#' @param mean.lambdaMax a number ; arithmetic mean of maximum multiplicative growth rate. To be used only used if \code{lambdaMax.norm = TRUE}.
+#' @param sd.lambdaMax a number ; standard deviation of maximum multiplicative growth rate. To be used only if \code{lambdaMax.norm = TRUE}.
+#' @param living.rate character string ; living rate : either \code{"long"} or \code{"short"}, see 'Details'. No ohter arguments allowed.
+#' @param surv.fixed number ; fixed estimate of adult annual survival rate provided by the user. To be used instead of mean.surv when \code{surv.norm = FALSE}.
+#' @param surv.norm boolean, default \code{FALSE}. If \code{TRUE}, simulates adult annual survival rate from a normal distribution with mu = \code{mean.surv} and standard deviation = \code{sd.surv} (see below).
+#' @param mean.surv number ; arithmetic mean of adult annual survival rate. To be used only if \code{surv.norm = TRUE}.
+#' @param sd.surv number ; standard deviation of adult annual survival rate. To be used only if \code{surv.norm = TRUE}.
+#' @param alpha.fixed number ; number ; fixed estimate of age at first breeding (in years). To be used when \code{alpha.unif = FALSE} and \code{alpha.norm = FALSE}.
+#' @param alpha.unif boolean, default \code{FALSE}. Simulates age at first breeding from a uniform distribution bounded by \code{min.alpha} and \code{max.alpha}.
+#' @param min.alpha number ; minimum age at first breeding. To be used only if \code{alpha.unif = TRUE}.
+#' @param max.alpha number ; maximum age at first breeding. To be used only if \code{alpha.unif = TRUE}.
+#' @param alpha.norm boolean, default \code{FALSE}. If \code{TRUE}, simulates age at first breeding from a normal distribution with mu = \code{mean.alpha} and standard deviation = \code{sd.alpha}.
+#' @param mean.alpha number ; arithmetic mean of age at first breeding. To be used only used if \code{alpha.norm = TRUE}.
+#' @param sd.alpha number ; standard deviation of age at first breeding. To be used only if \code{alpha.norm = TRUE}.
+#' @param mass.fixed number ; fixed estimate of body mass (in kilograms) used to estimate adult survival rate from body mass.
+#' @param mass.norm boolean, default \code{FALSE}. If \code{TRUE}, simulates body mass from a normal distribution with mu = \code{mean.mass} and standard deviation = \code{sd.mass}.
+#' @param mean.mass number ; arithmetic mean of body mass (in kilograms). Only used if \code{mass.norm = TRUE}.
+#' @param sd.mass number ; standard deviation of body mass. Only used if \code{mass.norm = TRUE}.
+#' @param type.p character string ; the value of the parameter p can be either "\code{determinist}" or "\code{random}". No other character string allowed.
+#' @param type.e character string ; the value of the parameter e can be either "\code{determinist}" or "\code{random}". No other character string allowed.
+#' @param Fobj number ; objective factor, see 'Details'.
+#' @param harvest.fixed number ; number of harvested individuals.
+#' @param harvest.unif boolean ; default \code{FALSE}. If \code{TRUE}, simulates harvest level from a uniform distribution bounded by \code{min.harvest} and \code{max.harvest}.
+#' @param min.harvest number ; minimum number of harvested individuals. To be used only if \code{harvest.unif = TRUE}.
+#' @param max.harvest number ; maximum number of individuals harvested. To be used only if \code{harvest.unif = TRUE}.
+#' @param harvest.norm boolean, default \code{FALSE}. If \code{TRUE}, simulates harvest level from a normal distribution with mu =  \code{mean.harvest} and standard deviation = \code{sd.harvest}.
+#' @param mean.harvest number ; arithmetic mean of the number of harvested individuals. To be used only if \code{harvest.norm = TRUE}.
+#' @param sd.harvest number ; standard deviation of the number of harvested individuals. To be used only if \code{harvest.norm = TRUE}.
+#' @param pop.fixed number ;  fixed estimate of population size (in number of individuals). To be used when \code{pop.unif = FALSE} and \code{pop.norm = FALSE}.
+#' @param pop.unif boolean, default \code{FALSE}. If \code{TRUE}, simulates a population size from a uniform distribution bounded by \code{min.pop} and \code{max.pop}.
+#' @param min.pop number ; minimum population size. To be used only if \code{pop.unif = TRUE}.
+#' @param max.pop number ; maximum population size. To be only used if \code{pop.unif = TRUE}.
+#' @param pop.norm boolean, default \code{FALSE}. If \code{TRUE}, simulates a population size from a normal distribution with mu = \code{mean.pop} and standard deviation = \code{sd.pop}.
+#' @param mean.pop number ; arithmetic mean of population size. To be used only if \code{pop.norm = TRUE}.
+#' @param sd.pop number ; standard deviation of population size. To be used only if \code{pop.norm = TRUE}.
+#' @param theta.fixed number ; parameter for density-dependance.
+#' @param estim.theta character string ; default "\code{determinist}". The value of the parameter theta can be either "\code{determinist}" or "\code{random}", see 'Details'. No other arguments allowed.
+#'
+#'
+#' @return A dataframe with the following informations for each the n simulations in addition to the information provided in the function's arguments :
+#' If the argument \code{full.option} is \code{FALSE}, it provides a simple dataframe :
+#' \itemize{
+#'   \item \code{SP} the identification number assigned to the studied species
+#'   \item \code{Sim} the index of the simulation.
+#'   \item \code{Fs} the value of the safety factor.
+#'   \item \code{Rmax} the maximal annual recruitment rate (lambda max – 1).
+#'   \item \code{popsize} the population size (in number of individuals).
+#'   \item \code{harvest}  the number of individuals harvested each year.
+#'   \item \code{PTL} the Prescribed take level expressed in  individuals number.
+#'   \item \code{SHI} Sustainability harvest index (from 0 to +∞).
+#' }
+#' If the argument \code{full.option} is \code{TRUE}, it can provide the following informations in addition to the these within the simple dataframe :
+#' \itemize{
+#'   \item \code{e} a value extracted from a normal distribution (0, 0.087). This parameter appears when the adult annual survival rate is estimated from the body mass.
+#'   \item \code{p} a value extracted from a beta distribution (3.34,101.24). This parameter appears when the adult annual survival rate is estimated from the body mass.
+#'   \item \code{e.density} a value extracted from a normal distribution (0, 0.942). This parameter appears when the value of the parameter for density-dependance is unknown and must be estimated.
+#' }
+#' @export
+#'
+#'
+#' @seealso \code{\link{input.summary}}, \code{\link{output.summary}}, \code{\link{SHI.plot}}.
+#'
+#'
+#' @references
+#' Johnson, F. A., Walters, M. A., & Boomer, G. S. (2012). Allowable levels of take for the trade in Nearctic songbirds. Ecological Applications, 22(4), 1114-1130.
+#'
+#' Runge, M. C., Sauer, J. R., Avery, M. L., Blackwell, B. F., & Koneff, M. D. (2009). Assessing allowable take of migratory birds. The Journal of Wildlife Management, 73(4), 556-565.
+#'
+#' Boitani, L., & Fuller, T. (Eds.). (2000). Research techniques in animal ecology: controversies and consequences. Columbia university press.
+#'
+#' @importFrom stats rnorm runif
+#'
+#'
+#' @examples
+#' PTL(Nsim = 20, NSp = 2, living.rate = c("long", "short"),
+#' surv.fixed = c(0.8, 0.65),
+#' alpha.unif = TRUE, min.alpha = c(2, 1), max.alpha = c(3, 2),
+#' pop.fixed = c(3605244, 55805898),
+#' estim.theta = c("random", "determinist"),
+#' harvest.fixed = c(107802, 8447950),
+#' Fobj = c(0.1, 0.3, 0.5))
+#'
+PTL <- function(full.option = FALSE,
+                Nsim = 1,
+                NSp = NULL,
+                Rmax.fixed = NULL,
+                Rmax.norm = FALSE,
+                mean.Rmax = NULL,
+                sd.Rmax = NULL,
+                lambdaMax.fixed = NULL,
+                lambdaMax.norm = FALSE,
+                mean.lambdaMax = NULL,
+                sd.lambdaMax = NULL,
+                living.rate = NULL,
+                surv.fixed = NULL,
+                surv.norm = FALSE,
+                mean.surv = NULL,
+                sd.surv = NULL,
+                mass.fixed = NULL,
+                mass.norm = FALSE,
+                mean.mass = NULL,
+                sd.mass = NULL,
+                type.p = NULL,
+                type.e = NULL,
+                alpha.fixed = NULL,
+                alpha.unif = FALSE,
+                min.alpha = NULL,
+                max.alpha = NULL,
+                alpha.norm = FALSE,
+                mean.alpha = NULL,
+                sd.alpha = NULL,
+                Fobj = NULL,
+                harvest.fixed = NULL,
+                harvest.unif = FALSE,
+                min.harvest = NULL,
+                max.harvest = NULL,
+                harvest.norm = FALSE,
+                mean.harvest = NULL,
+                sd.harvest = NULL,
+                pop.fixed = NULL,
+                pop.unif = FALSE,
+                min.pop = NULL,
+                max.pop = NULL,
+                pop.norm = FALSE,
+                mean.pop = NULL,
+                sd.pop = NULL,
+                theta.fixed = NULL,
+                estim.theta = NULL
+) {
+  ## I. Error messages about vector type ----
+  # Printing error messages if the vector types of the datas are not correct
+  if(!is.null(Nsim) && !is.numeric(Nsim)){ # If 'Nsim' argument is not null and it is not a numeric vector then print an error message
+    stop("'Nsim' must be a numeric vector")
+  }
+  if(!is.null(NSp) && !is.numeric(NSp)){
+    stop("'NSp' must be a numeric vector")
+  }
+  if(!is.null(Fobj) && !is.numeric(Fobj)){
+    stop("'Fobj' must be a numeric vector")
+  }
+
+  ## Rmax argments ----
+  if(!is.null(Rmax.fixed) & !is.numeric(Rmax.fixed)){
+    stop("'Rmax.fixed' must be a numeric vector")
+  }
+  if(!is.null(mean.Rmax) & !is.numeric(mean.Rmax)){
+    stop("'mean.Rmax' must be a numeric vector")
+  }
+  if(!is.null(sd.Rmax) & !is.numeric(sd.Rmax)){
+    stop("'sd.Rmax' must be a numeric vector")
+  }
+
+  ## LambdaMax arguments ----
+  if(!is.null(lambdaMax.fixed) & !is.numeric(lambdaMax.fixed)){
+    stop("'lambdaMax.fixed' must be a numeric vector")
+  }
+  if(!is.null(mean.lambdaMax) & !is.numeric(mean.lambdaMax)){
+    stop("'mean.lambdaMax' must be a numeric vector")
+  }
+  if(!is.null(sd.lambdaMax) & !is.numeric(sd.lambdaMax)){
+    stop("'sd.lambdaMax' must be a numeric vector")
+  }
+
+  ## living rate arguments ----
+  if(!is.null(living.rate) && !is.character(living.rate)){
+    stop("'living.rate' must be a character vector")
+  }
+
+  ## survival arguments ----
+  if(!is.null(surv.fixed) && !is.numeric(surv.fixed)){
+    stop("'surv.fixed' must be a numeric vector")
+  }
+  if(!is.null(mean.surv) && !is.numeric(mean.surv)){
+    stop("'mean.surv' must be a numeric vector")
+  }
+  if(!is.null(sd.surv) && !is.numeric(sd.surv)){
+    stop("'sd.surv' must be a numeric vector")
+  }
+
+  ## alpha arguments ----
+  if(!is.null(alpha.fixed) && !is.numeric(alpha.fixed)){
+    stop("'alpha.fixed' must be a numeric vector")
+  }
+  if(!is.null(min.alpha) && !is.numeric(min.alpha)){
+    stop("'min.alpha' must be a numeric vector")
+  }
+  if(!is.null(max.alpha) && !is.numeric(max.alpha)){
+    stop("'max.alpha' must be a numeric vector")
+  }
+  if(!is.null(mean.alpha) && !is.numeric(mean.alpha)){
+    stop("'mean.alpha' must be a numeric vector")
+  }
+  if(!is.null(sd.alpha) && !is.numeric(sd.alpha)){
+    stop("'sd.alpha' must be a numeric vector")
+  }
+
+  ## mass arguments ----
+  if(!is.null(mass.fixed) && !is.numeric(mass.fixed)){
+    stop("'mass.fixed' must be a numeric vector")
+  }
+  if(!is.null(mean.mass) && !is.numeric(mean.mass)){
+    stop("'mean.mass' must be a numeric vector")
+  }
+  if(!is.null(sd.mass) && !is.numeric(sd.mass)){
+    stop("'sd.mass' must be a numeric vector")
+  }
+  if(!is.null(type.p) && !is.character(type.p)){
+    stop("'type.p' must be a character vector")
+  }
+  if(!is.null(type.e) && !is.character(type.e)){
+    stop("'type.e' must be a character vector")
+  }
+
+  ## population size arguments ----
+  if(!is.null(pop.fixed) && !is.numeric(pop.fixed)){
+    stop("'pop.fixed' must be a numeric vector")
+  }
+  if(!is.null(min.pop) && !is.numeric(min.pop)){
+    stop("'min.pop' must be a numeric vector")
+  }
+  if(!is.null(max.pop) && !is.numeric(max.pop)){
+    stop("'max.pop' must be a numeric vector")
+  }
+  if(!is.null(mean.pop) && !is.numeric(mean.pop)){
+    stop("'mean.pop' must be a numeric vector")
+  }
+  if(!is.null(sd.pop) && !is.numeric(sd.pop)){
+    stop("'sd.pop' must be a numeric vector")
+  }
+
+  ## harvest arguments -
+  if(!is.null(harvest.fixed) && !is.numeric(harvest.fixed)){
+    stop("'harvest.fixed' must be a numeric vector")
+  }
+  if(!is.null(min.harvest) && !is.numeric(min.harvest)){
+    stop("'min.harvest' must be a numeric vector")
+  }
+  if(!is.null(max.harvest) && !is.numeric(max.harvest)){
+    stop("'max.harvest' must be a numeric vector")
+  }
+  if(!is.null(mean.harvest) && !is.numeric(mean.harvest)){
+    stop("'mean.harvest' must be a numeric vector")
+  }
+  if(!is.null(sd.harvest) && !is.numeric(sd.harvest)){
+    stop("'sd.harvest' must be a numeric vector")
+  }
+
+  ## theta
+  if(!is.null(theta.fixed) && !is.numeric(theta.fixed)){
+    stop("'theta.fixed' must be a numeric vector")
+  }
+  if(!is.null(estim.theta) && !is.character(estim.theta)){
+    stop("'estim.theta' must be a character vector")
+  }
+
+
+
+  ## II. Error messages about input data ----
+  # Printing error messages if the input datas are not correct
+
+  ## II.1. Arguments which can not be specified together ----
+  ## Rmax arguments ----
+  if(!is.null(Rmax.fixed) && (isTRUE(Rmax.norm)
+                              || !is.null(mean.Rmax)
+                              || !is.null(sd.Rmax))){
+    stop("'Rmax.fixed' argument and 'Rmax' arguments for normal distribution can not be specified together")
+  }
+  if(!is.null(Rmax.fixed)
+     || isTRUE(Rmax.norm)
+     || !is.null(mean.Rmax)
+     || !is.null(sd.Rmax) && (!is.null(lambdaMax.fixed)
+                              || isTRUE(lambdaMax.norm)
+                              || !is.null(mean.lambdaMax)
+                              || !is.null(sd.lambdaMax))){
+    stop("'Rmax' arguments and 'Lambdamax' arguments can not be specified together")
+  }
+  if(!is.null(Rmax.fixed)
+     || isTRUE(Rmax.norm)
+     || !is.null(mean.Rmax)
+     || !is.null(sd.Rmax) && !is.null(living.rate)){
+    stop("'Rmax' arguments and 'living.rate' arguments can not be specified together")
+  }
+  if((!is.null(Rmax.fixed)
+      || isTRUE(Rmax.norm)
+      || !is.null(mean.Rmax)
+      || !is.null(sd.Rmax)) && (!is.null(surv.fixed)
+                                || isTRUE(surv.norm)
+                                || !is.null(mean.surv)
+                                || !is.null(sd.surv))){
+    stop("'Rmax' arguments and 'survival' arguments can not be specified together")
+  }
+  if((!is.null(Rmax.fixed)
+      || isTRUE(Rmax.norm)
+      || !is.null(mean.Rmax)
+      || !is.null(sd.Rmax)) && (!is.null(alpha.fixed)
+                                || isTRUE(alpha.norm)
+                                || !is.null(mean.alpha)
+                                || !is.null(sd.alpha)
+                                || isTRUE(alpha.unif)
+                                || !is.null(min.alpha)
+                                || !is.null(max.alpha))){
+    stop("'Rmax' arguments and 'alpha' arguments can not be specified together")
+  }
+  if((!is.null(Rmax.fixed)
+      || isTRUE(Rmax.norm)
+      || !is.null(mean.Rmax)
+      || !is.null(sd.Rmax)) && (!is.null(mass.fixed)
+                                || isTRUE(mass.norm)
+                                || !is.null(mean.mass)
+                                || !is.null(sd.mass)
+                                || !is.null(type.p)
+                                || !is.null(type.e))){
+    stop("'Rmax' arguments and arguments to estimate survival based on body mass can not be specified together")
+  }
+
+  ## lambdaMax argments ----
+  if(!is.null(lambdaMax.fixed) && (isTRUE(lambdaMax.norm)
+                                   || !is.null(mean.lambdaMax)
+                                   || !is.null(sd.lambdaMax))){
+    stop("'lambdaMax.fixed' and 'lambdaMax' arguments for normal distribution can not be specified together")
+  }
+  if((!is.null(lambdaMax.fixed)
+     || isTRUE(lambdaMax.norm)
+     || !is.null(mean.lambdaMax)
+     || !is.null(sd.lambdaMax)) && !is.null(living.rate)){
+    stop("'lambdaMax' arguments and 'living.rate' arguments can not be specified together")
+  }
+  if((!is.null(lambdaMax.fixed)
+      || isTRUE(lambdaMax.norm)
+      || !is.null(mean.lambdaMax)
+      || !is.null(sd.lambdaMax)) && (!is.null(surv.fixed)
+                                     || isTRUE(surv.norm)
+                                     || !is.null(mean.surv)
+                                     || !is.null(sd.surv))){
+    stop("'lambdaMax' arguments and 'survival' arguments can not be specified together")
+  }
+  if((!is.null(lambdaMax.fixed)
+      || isTRUE(lambdaMax.norm)
+      || !is.null(mean.lambdaMax)
+      || !is.null(sd.lambdaMax)) && (!is.null(alpha.fixed)
+                                     || isTRUE(alpha.norm)
+                                     || !is.null(mean.alpha)
+                                     || !is.null(sd.alpha)
+                                     || isTRUE(alpha.unif)
+                                     || !is.null(min.alpha)
+                                     || !is.null(max.alpha))){
+    stop("'lambdaMax' arguments and 'alpha' arguments can not be specified together")
+  }
+  if((!is.null(lambdaMax.fixed)
+      || isTRUE(lambdaMax.norm)
+      || !is.null(mean.lambdaMax)
+      || !is.null(sd.lambdaMax)) && (!is.null(mass.fixed)
+                                     || isTRUE(mass.norm)
+                                     || !is.null(mean.mass)
+                                     || !is.null(sd.mass)
+                                     || !is.null(type.p)
+                                     || !is.null(type.e))){
+    stop("'lambdaMax' arguments and arguments to estimate survival based on body mass can not be specified together")
+  }
+
+  ## survival arguments ----
+  if(!is.null(surv.fixed) && (isTRUE(surv.norm)
+                              || !is.null(mean.surv)
+                              || !is.null(sd.surv))){
+    stop("'surv.fixed' and 'surv' arguments for normal distribution can not be specified together")
+  }
+  if((!is.null(surv.fixed)
+      || isTRUE(surv.norm)
+      || !is.null(mean.surv)
+      || !is.null(sd.surv)) && (!is.null(mass.fixed)
+                                 || isTRUE(mass.norm)
+                                 || !is.null(mean.mass)
+                                 || !is.null(sd.mass)
+                                 || !is.null(type.p)
+                                 || !is.null(type.e))){
+    stop("'surv.fixed' and arguments to estimate survival based on body mass can not be specified together")
+  }
+
+  ## mass arguments
+  if(!is.null(mass.fixed) && (isTRUE(mass.norm)
+                            || !is.null(mean.mass)
+                            || !is.null(sd.mass))){
+    stop("'mass.fixed' and 'mass' arguments for normal distribution can not be specified together")
+  }
+
+  ## alpha arguments----
+  if(!is.null(alpha.fixed) && (isTRUE(alpha.unif)
+                               || !is.null(min.alpha)
+                               || !is.null(max.alpha)
+                               || isTRUE(alpha.norm)
+                               || !is.null(mean.alpha)
+                               || !is.null(sd.alpha))){
+    stop("'alpha.fixed' and 'alpha' arguments for uniform or normal distribution can not be specified together")
+  }
+  if((isTRUE(alpha.unif)
+      || !is.null(min.alpha)
+      || !is.null(max.alpha)) && (isTRUE(alpha.norm)
+                                  || !is.null(mean.alpha)
+                                  || !is.null(sd.alpha))){
+    stop("'alpha' arguments for uniform distribution and 'alpha' arguments for normal distribution
+           can not be specified together")
+  }
+
+  ## theta arguments----
+  if(!is.null(theta.fixed) && !is.null(estim.theta)) {
+    stop("'theta.fixed' argument and 'estim.theta' argument can not be specified together")
+  }
+
+  if(is.null(theta.fixed) && is.null(estim.theta)){
+    stop("'theta.fixed' or 'estim.theta' must be specified")
+  }
+
+  ## popsize arguments----
+  if(!is.null(pop.fixed) && (isTRUE(pop.unif)
+                             || !is.null(min.pop)
+                             || !is.null(max.pop)
+                             || isTRUE(pop.norm)
+                             || !is.null(mean.pop)
+                             || !is.null(sd.pop))){
+    stop("'pop.fixed' and 'pop' arguments for uniform and normal distribution can not be
+           specified together")
+  }
+  if((isTRUE(pop.unif)
+      || !is.null(min.pop)
+      || !is.null(max.pop)) && (isTRUE(pop.norm)
+                                || !is.null(mean.pop)
+                                || !is.null(sd.pop))){
+    stop("'pop' arguments for uniform distribution and 'pop' arguments for normal distribution
+           can not be specified together")
+  }
+
+  ## harvest arguments----
+  if(!is.null(harvest.fixed) && (isTRUE(harvest.norm)
+                                 || !is.null(min.harvest)
+                                 || !is.null(max.harvest)
+                                 || isTRUE(harvest.norm)
+                                 || !is.null(mean.harvest)
+                                 || !is.null(sd.harvest))){
+    stop("'harvest.fixed' and 'harvest' arguments for uniform and normal distribution can not be
+           specified together")
+  }
+  if((isTRUE(harvest.unif)
+      || !is.null(min.harvest)
+      || !is.null(max.harvest)) && (isTRUE(harvest.norm)
+                                    || !is.null(mean.harvest)
+                                    || !is.null(sd.harvest))){
+    stop("'harvest' arguments for uniform distribution and 'harvest' arguments for normal distribution
+           can not be specified together")
+  }
+
+
+
+
+
+  ## II.2. Arguments which must be specified (together) ----
+  if(is.null(NSp)){
+    stop("'NSp' must be specified")
+  }
+  if(is.null(Fobj)){
+    stop("'Fobj' must be specified")
+  }
+
+  ## Length of arguments
+  var.storage <- c(length(living.rate), length(surv.fixed), length(mean.surv),
+                   length(sd.surv), length(mass.fixed), length(mean.mass), length(sd.mass),
+                   length(type.p), length(type.e),
+                   length(alpha.fixed),length(min.alpha), length(max.alpha),
+                   length(mean.alpha), length(sd.alpha), length(Rmax.fixed),
+                   length(mean.Rmax), length(sd.Rmax), length(lambdaMax.fixed),
+                   length(mean.lambdaMax), length(sd.lambdaMax), length(harvest.fixed),
+                   length(min.harvest), length(max.harvest), length(mean.harvest),
+                   length(sd.harvest), length(pop.fixed), length(min.pop),
+                   length(max.pop), length(mean.pop), length(sd.pop),
+                   length(theta.fixed), length(estim.theta))
+  if(length(unique(var.storage[var.storage!=0])) > 1) {
+    stop("arguments do not have the same length")
+  }
+
+  ## living.rate arguments----
+  if (is.null(living.rate)
+      && is.null(Rmax.fixed)
+      && is.null(mean.Rmax)
+      && is.null(sd.Rmax)
+      && is.null(lambdaMax.fixed)
+      && is.null(mean.lambdaMax)
+      && is.null(sd.lambdaMax)){
+    stop("'living.rate' or 'Rmax' arguments or 'lambdamax' arguments must be specified")
+  }
+  error.living.rate <- living.rate[which(living.rate != "short")]
+  error.living.rate <- error.living.rate[which(error.living.rate != "long")]
+  if(length(error.living.rate) >= 1 ){stop("'living.rate' must be 'short' or 'long'")}
+
+  ## mass ----
+  error.type.p <- type.p[which(type.p != "determinist")]
+  error.type.p <- error.type.p[which(error.type.p != "random")]
+  if(length(error.type.p) >= 1 ){stop("'type.p' must be 'determinist' or 'random'")}
+
+  error.type.e <- type.e[which(type.e != "determinist")]
+  error.type.e <- error.type.e[which(error.type.e != "random")]
+  if(length(error.type.e) >= 1 ){stop("'type.e' must be 'determinist' or 'random'")}
+
+
+  ## theta arguments ----
+  error.estim.theta <- estim.theta[which(estim.theta != "determinist")]
+  error.estim.theta <- error.estim.theta[which(error.estim.theta != "random")]
+  if(length(error.estim.theta) >= 1 ){stop("'estim.theta' must be 'determinist' or 'random'")}
+
+
+  ## II.2.1 If input data are extract from a distribution ----
+  ## Rmax arguments ----
+  if(isTRUE(Rmax.norm) && (is.null(mean.Rmax) || is.null(sd.Rmax))){
+    stop("if 'Rmax.norm' is 'TRUE', 'mean.Rmax' and 'sd.Rmax' must be specified")
+  }
+
+  ## lambdaMax arguments ----
+  if(isTRUE(lambdaMax.norm) && (is.null(mean.lambdaMax) || is.null(sd.lambdaMax))){
+    stop("if 'lambdaMax.norm' is 'TRUE', 'mean.lambdaMax' and 'sd.lambdaMax' must be specified")
+  }
+
+  ## survival arguments ----
+  if(isTRUE(surv.norm) && (is.null(mean.surv) || is.null(sd.surv))){
+    stop("if 'surv.norm' is 'TRUE', 'mean.surv' and 'sd.surv' must be specified")
+  }
+
+  ## alpha arguments ----
+  if(isTRUE(alpha.norm) && (is.null(mean.alpha) || is.null(sd.alpha))){
+    stop("if 'alpha.norm' is 'TRUE', 'mean.alpha' and 'sd.alpha' must be specified")
+  }
+  if(isTRUE(alpha.unif) && (is.null(min.alpha) || is.null(max.alpha))){
+    stop("if 'alpha.unif' is 'TRUE', 'min.alpha' and 'max.alpha' must be specified")
+  }
+
+  ## mass arguments ----
+  if(isTRUE(mass.norm) && (is.null(mean.mass) || is.null(sd.mass))){
+    stop("if 'mass.norm' is 'TRUE', 'mean.mass' and 'sd.mass' must be specified")
+  }
+  if((!is.null(mass.fixed) || !is.null(mean.mass)) && is.null(type.p)){
+    stop("if 'mass' arguments are specified, 'type.p' must be specified")
+  }
+  if((!is.null(mass.fixed) || !is.null(mean.mass)) && is.null(type.e)){
+    stop("if 'mass' arguments are specified, 'type.e' must be specified")
+  }
+
+  ## popsize arguments ----
+  if(isTRUE(pop.norm) && (is.null(mean.pop) || is.null(sd.pop))){
+    stop("if 'pop.norm' is 'TRUE', 'mean.pop' and 'sd.pop' must be specified")
+  }
+  if(isTRUE(pop.unif) && (is.null(min.pop) || is.null(max.pop))){
+    stop("if 'pop.unif' is 'TRUE', 'min.pop' and 'max.pop' must be specified")
+  }
+
+  ## harvest arguments ----
+  if(isTRUE(harvest.norm) && (is.null(mean.harvest) || is.null(sd.harvest))){
+    stop("if 'harvest.norm' is 'TRUE', 'mean.harvest' and 'sd.harvest' must be specified")
+  }
+  if(isTRUE(harvest.unif) && (is.null(min.harvest) || is.null(max.harvest))){
+    stop("if 'harvest.unif' is 'TRUE', 'min.harvest' and 'max.harvest' must be specified")
+  }
+
+
+
+
+  ## II.2.2 If some arguments are not NULL ----
+  ## Rmax arguments ----
+  if((!is.null(mean.Rmax)||!is.null(sd.Rmax)) && !isTRUE(Rmax.norm)){
+    stop("if 'mean.Rmax' or 'sd.Rmax' specified, 'Rmax.norm' must be 'TRUE'")
+  }
+
+  ## lambdaMax arguments ----
+  if((!is.null(mean.lambdaMax)||!is.null(sd.lambdaMax)) && !isTRUE(lambdaMax.norm)){
+    stop("if 'mean.lambdaMax' or 'sd.lambdaMax' specified, 'lambdaMax.norm' must be 'TRUE'")
+  }
+
+  ## survival arguments ----
+  if((!is.null(mean.surv)||!is.null(sd.surv)) && !isTRUE(surv.norm)){
+    stop("if 'mean.surv' or 'sd.surv' specified, 'surv.norm' must be 'TRUE'")
+  }
+
+  ## alpha arguments ----
+  if((!is.null(mean.alpha)||!is.null(sd.alpha)) && !isTRUE(alpha.norm)){
+    stop("if 'mean.alpha' or 'sd.alpha' specified, 'alpha.norm' must be 'TRUE'")
+  }
+  if((!is.null(min.alpha)||!is.null(max.alpha)) && !isTRUE(alpha.unif)){
+    stop("if 'min.alpha' or 'max.alpha' specified, 'alpha.unif' must be 'TRUE'")
+  }
+
+  ## mass arguments ----
+  if((!is.null(mean.mass)||!is.null(sd.mass)) && !isTRUE(mass.norm)){
+    stop("if 'mean.mass' or 'sd.mass' specified, 'mass.norm' must be 'TRUE'")
+  }
+
+  ## popsize arguments ----
+  if((!is.null(mean.pop)||!is.null(sd.pop)) && !isTRUE(pop.norm)){
+    stop("if 'mean.pop' or 'sd.pop' specified, 'pop.norm' must be 'TRUE'")
+  }
+  if((!is.null(min.pop)||!is.null(max.pop)) && !isTRUE(pop.unif)){
+    stop("if 'min.pop' or 'max.pop' specified, 'pop.unif' must be 'TRUE'")
+  }
+
+  ## harvest arguments ----
+  if((!is.null(mean.harvest)||!is.null(sd.harvest)) && !isTRUE(harvest.norm)){
+    stop("if 'mean.harvest' or 'sd.harvest' specified, 'harvest.norm' must be 'TRUE'")
+  }
+  if((!is.null(min.harvest)||!is.null(max.harvest)) && !isTRUE(harvest.unif)){
+    stop("if 'min.harvest' or 'max.harvest' specified, 'harvest.unif' must be 'TRUE'")
+  }
+
+  ## II.3. Other error messages ----
+  ## Rmax arguments ----
+  if(isTRUE(mean.Rmax < sd.Rmax)){
+    stop("'sd.Rmax' must be lower than 'mean.Rmax'")
+  }
+  if(isTRUE(Rmax.norm) && (isTRUE(lambdaMax.norm) || isTRUE(surv.norm) || isTRUE(alpha.norm) || isTRUE(alpha.unif) || isTRUE(mass.norm)) ){
+    stop("'Rmax.norm' and 'lambdaMax.norm'or 'surv.norm'or 'alpha.unif' or alpha.norm' or 'mass.norm'  can not be TRUE together")
+  }
+
+  if(isTRUE(lambdaMax.norm) &&  (isTRUE(surv.norm) || isTRUE(alpha.norm) || isTRUE(alpha.unif) || isTRUE(mass.norm)) ){
+    stop("'lambdaMax.norm' and 'surv.norm'or 'alpha.unif' or 'alpha.norm' or 'mass.norm'  can not be TRUE together")
+  }
+
+  if(isTRUE(surv.norm) && isTRUE(mass.norm) ){
+    stop("'surv.norm' and 'mass.norm'  can not be TRUE together")
+  }
+
+  if( isTRUE(alpha.norm) && (isTRUE(alpha.unif) || isTRUE(mass.norm)) ){
+    stop("'alpha.unif' and 'alpha.norm' or 'mass.norm'  can not be TRUE together")
+  }
+
+  ##lambdaMax arguments ----
+  if(isTRUE(mean.lambdaMax < sd.lambdaMax)){
+    stop("'sd.lambdaMax' must be lower than 'mean.lambdaMax'")
+  }
+
+  ## survival arguments ----
+  if(isTRUE(mean.surv < sd.surv)){
+    stop("'sd.surv' must be lower than 'mean.surv'")
+  }
+
+  ## alpha arguments ----
+  if(isTRUE(mean.alpha < sd.alpha)){
+    stop("'sd.alpha' must be lower than 'mean.alpha'")
+  }
+  if(isTRUE(max.alpha < min.alpha)){
+    stop("'min.alpha' must be lower than 'max.alpha'")
+  }
+
+  ## mass arguments
+  if(isTRUE(mean.mass < sd.mass)){
+    stop("'sd.surv' must be lower than 'mean.surv'")
+  }
+
+  ## popsize arguments----
+  if(isTRUE(mean.pop < sd.pop)){
+    stop("'sd.pop' must be lower than 'mean.pop'")
+  }
+  if(isTRUE(max.pop < min.pop)){
+    stop("'min.pop' must be lower than 'max.pop'")
+  }
+
+  ## harvest arguments----
+  if(isTRUE(mean.harvest < sd.harvest)){
+    stop("'sd.harvest' must be lower than 'mean.harvest'")
+  }
+  if(isTRUE(max.harvest < min.harvest)){
+    stop("'min.harvest' must be lower than 'max.harvest'")
+  }
+
+
+
+  ## III. Calculations ----
+  ## Step 1 : Creation of the end storage vectors to save results of the calculations ----
+  Output1 <- NULL
+  Output2 <- NULL
+
+
+
+  ## Step 2 : Creation of the first loop calculations ----
+  # This step makes it possible to repeat the series of calculations whithin the loop as many times as there are studied species fixing temporary input values
+  for (a in 1: NSp) { # Loop for calculations from 1 to the number of species studied
+
+    # Creation of storage vectors to save results of the calculations for the loop a
+    Rmax.calc <- NA
+
+    ## Step 3 : Temporary setting of input values ----
+    living.rateT <- ifelse(!is.null(living.rate), living.rate[a], NA) # If the argument 'living.rate' is not null, then temporary setting the value of 'living.rate' of the index a in the object named 'living.rateT', else atributting 'NA' to the object 'living.rateT'. The same philosophy is applied below.
+    surv.fixedT <- ifelse(!is.null(surv.fixed), surv.fixed[a], NA)
+    mean.survT <- ifelse(!is.null(mean.surv), mean.surv[a], NA)
+    sd.survT <- ifelse(!is.null(sd.surv), sd.surv[a], NA)
+    mass.fixedT <- ifelse(!is.null(mass.fixed), mass.fixed[a], NA)
+    mean.massT <- ifelse(!is.null(mean.mass), mean.mass[a], NA)
+    sd.massT <- ifelse(!is.null(sd.mass), sd.mass[a], NA)
+    type.pT <- ifelse(!is.null(type.p), type.p[a], NA)
+    type.eT <- ifelse(!is.null(type.e), type.e[a], NA)
+    alpha.fixedT <- ifelse(!is.null(alpha.fixed), alpha.fixed[a], NA)
+    min.alphaT <- ifelse(!is.null(min.alpha), min.alpha[a], NA)
+    max.alphaT <- ifelse(!is.null(max.alpha), max.alpha[a], NA)
+    mean.alphaT <- ifelse(!is.null(mean.alpha), mean.alpha[a], NA)
+    sd.alphaT <- ifelse(!is.null(sd.alpha), sd.alpha[a], NA)
+    theta.fixedT <- ifelse(!is.null(theta.fixed), theta.fixed[a], NA)
+    estim.thetaT <- ifelse(!is.null(estim.theta), estim.theta[a], NA)
+    Rmax.fixedT <- ifelse(!is.null(Rmax.fixed), Rmax.fixed[a], NA)
+    mean.RmaxT <- ifelse(!is.null(mean.Rmax), mean.Rmax[a], NA)
+    sd.RmaxT <- ifelse(!is.null(sd.Rmax), sd.Rmax[a], NA)
+    lambdaMax.fixedT <- ifelse(!is.null(lambdaMax.fixed), lambdaMax.fixed[a], NA)
+    mean.lambdaMaxT <- ifelse(!is.null(mean.lambdaMax), mean.lambdaMax[a], NA)
+    sd.lambdaMaxT <- ifelse(!is.null(sd.lambdaMax), sd.lambdaMax[a], NA)
+    harvest.fixedT <- ifelse(!is.null(harvest.fixed), harvest.fixed[a], NA)
+    min.harvestT <- ifelse(!is.null(min.harvest), min.harvest[a], NA)
+    max.harvestT <- ifelse(!is.null(max.harvest), max.harvest[a], NA)
+    mean.harvestT <- ifelse(!is.null(mean.harvest), mean.harvest[a], NA)
+    sd.harvestT <- ifelse(!is.null(sd.harvest), sd.harvest[a], NA)
+    pop.fixedT <- ifelse(!is.null(pop.fixed), pop.fixed[a], NA)
+    min.popT <- ifelse(!is.null(min.pop), min.pop[a], NA)
+    max.popT <- ifelse(!is.null(max.pop), max.pop[a], NA)
+    mean.popT <- ifelse(!is.null(mean.pop), mean.pop[a], NA)
+    sd.popT <- ifelse(!is.null(sd.pop), sd.pop[a], NA)
+
+
+
+    ## Step 4 : Creation of the second loop calculations in the first one ----
+    # This step makes it possible to repeat the series of calculations whithin the loop as many times as there are objective factors
+    for (b in 1: length(Fobj)){ # Loop for calculations according the objective factor
+      FobjT <- Fobj[b]
+
+
+
+      ## Step 5 : Estimation of Rmax ----
+      ## Condition "if" : if Rmax and lambdaMax are unknown ----
+      # In this case, Rmax must be calculated with the rmax function
+      if(is.null(Rmax.fixed) && is.null(mean.Rmax) && is.null(lambdaMax.fixed) && is.null(mean.lambdaMax)){ # If the arguments 'Rmax.fixed, 'mean.Rmax, 'lambdaMax', and "mean.lambdaMax" are null then :
+        # Rmax is calculated and datas are save in a temporary data frame named 'OutputT1'
+        OutputT1 <- rmax(Nsim = Nsim,
+                         living.rate = living.rateT,
+                         surv.fixed = surv.fixedT,
+                         surv.norm = surv.norm,
+                         mean.surv = mean.survT,
+                         sd.surv = sd.survT,
+                         mass.fixed = mass.fixedT,
+                         mass.norm = FALSE,
+                         mean.mass = mean.massT,
+                         sd.mass = mean.massT,
+                         type.p = type.pT,
+                         type.e = type.eT,
+                         alpha.fixed = alpha.fixedT,
+                         alpha.unif = alpha.unif,
+                         min.alpha = min.alphaT,
+                         max.alpha = max.alphaT,
+                         alpha.norm = alpha.norm,
+                         mean.alpha = mean.alphaT,
+                         sd.alpha = sd.alphaT)
+        Output1 <- rbind(Output1, OutputT1)
+
+
+
+      ## Condition "else" : if Rmax or lambdaMax are known ----
+      # In this case, Rmax values are generated without calculations
+      }else{
+        if(isTRUE(!is.na(Rmax.fixedT))){ # If the temporary value of Rmax.fixedT is different to 'NA' (means the value of Rmax is known) then :
+          Rmax.calc <- rep(Rmax.fixedT, Nsim) # The value of Rmax.fixedT is replicated 'Nsim' times and saving in the object 'Rmax'
+        }
+        if(isTRUE(!is.na(lambdaMax.fixedT))){ # If the temporary value of lambdaMax.fixedT is different to 'NA' (means the value of lambdaMax is known) then :
+          Rmax.calc <- lambdaMax.fixedT - 1 # Rmax is the difference between 'lambdaMax.fixedT' and 1
+        }
+        if(isTRUE(Rmax.norm)){ # If Rmax is extrated from a normal distribution then :
+          Rmax.calc <- rnorm(Nsim, mean.RmaxT, sd.RmaxT) # 'Nsim' values are extracted from a normal distribution with the mean 'mean.RmaxT' and the standard deviation 'sd.RmaxT'
+        }
+        if(isTRUE(lambdaMax.norm)){ # If lambdaMax is extracted from a normal distribution then :
+          lambdaMax <- rnorm(Nsim, mean.lambdaMaxT, sd.lambdaMaxT) # 'Nsim' values are extracted from a normal distribution with the mean 'mean.lambdaMaxT' and the standard deviation 'sd.lambdaMax'
+          Rmax.calc <- lambdaMax - 1 # Rmax is the difference between 'lambdaMax' and 1
+        }
+      } # End of condition "if else"
+
+      ## Step 6 : Generation of estimated variables of 'harvest' and 'popsize'----
+      ## Generation of the estimated variable of 'harvest' ----
+      # This step is necessary to compare the harvest with the PTL
+      if(isTRUE(harvest.unif)){ # If harvest is extrated from a uniform distribution then :
+        harvest.calc <- runif(Nsim, min.harvestT, max.harvestT) # 'Nsim' values are extracted from a uniform distribution with 'min.harvestT' as lower bound and 'max.harvestT' as upper bound
+        harvest.calc <- round(harvest.calc) # Round the values of 'harvest' object to the whole
+      }
+      if(isTRUE(harvest.norm)){ # If harvest is extracted from a normal distribution then :
+        harvest.calc <- rnorm(Nsim, mean.harvestT, sd.harvestT) # 'Nsim' values are extracted from a normal distribution with with the mean 'mean.harvestT' and the standard deviation 'sd.harvestT'
+        harvest.calc <- round(harvest.calc) # Round the values of 'harvest' object to the whole
+      }
+      if(isTRUE(!is.na(harvest.fixedT))){ # If the temporary value of harvest.fixedT is different to 'NA' (means the value of harvest is known) then :
+        harvest.calc <- rep(harvest.fixedT, Nsim) # The value of harvest.fixedT is replicated 'Nsim' times and saving in the object 'harvest'
+      }
+
+
+
+      ## Generation of the estimated variable of 'popsize' ----
+      # This step is necessary to calculate the PTL
+      if(isTRUE(pop.unif)){ # If popsize is extrated from a uniform distribution then :
+        popsize.calc <- runif(Nsim,min.popT,max.popT) # 'Nsim' values are extracted from a uniform distribution with 'min.popT' as lower bound and 'max.popT' as upper bound
+        popsize.calc <- round(popsize.calc) # Round the values of 'popsize' object to the whole
+      }
+      if(isTRUE(pop.norm)){ # If popsize is extracted from a normal distribution then :
+        popsize.calc <- rnorm(Nsim,mean.popT,sd.popT) # 'Nsim' values are extracted from a normal distribution with with the mean 'mean.popT' and the standard deviation 'sd.popT'
+        popsize.calc <- round(popsize.calc) # Round the values of 'popsize' object to the whole
+      }
+      if(isTRUE(!is.na(pop.fixedT))){ # If the temporary value of pop.fixedT is different to 'NA' (means the value of popsize is known) then :
+        popsize.calc <- rep(pop.fixedT, Nsim) # The value of pop.fixedT is replicated 'Nsim' times and saving in the object 'popsize'
+      }
+
+
+
+      ## Step 7 : Saving datas generated in the step 6 in a temporary dataframe named 'OutputT2'----
+      NsimT <- 1:Nsim # This object makes it possible to known the value of the index a for each row of the data frame below
+      OutputT2 <- data.frame(SP = a, Nsim = NsimT, Fobj = FobjT, popsize = popsize.calc, harvest = harvest.calc) # Creation of the OutputT2
+
+
+
+      ## Step 8 : Complementary columns for the 'OutputT2'----
+      # This step integrates columns in the final data frame according the arguments informed
+      var.storage <- c("theta.fixedT", "Rmax.calc", "mean.RmaxT", "sd.RmaxT", "lambdaMax.fixedT", "mean.lambdaMaxT",
+                       "sd.lambdaMaxT", "min.popT", "max.popT", "mean.popT", "sd.popT",
+                       "min.harvestT", "max.harvestT", "mean.harvestT", "sd.harvestT") # Saving in an object all sumpplementary possible columns
+      not.na <- which(!is.na(mget(var.storage))) # Select columns whose values are different from NA. Works only with NA. That is why parameters which are NULL are transformed as NA
+      OutputT2[,var.storage[not.na]]<- mget(var.storage)[not.na] # Insert values columns whose values are different from NA in the temporary data frame 'OutputT2'
+
+      ## Step 9 : Reordering columns of the 'OutputT2' ----
+      var.rmax<- c("theta.fixedT", "Rmax.calc", "mean.RmaxT", "sd.RmaxT", "lambdaMax.fixedT", "mean.lambdaMaxT", "sd.lambdaMaxT") # Order of the columns wanted in the final output
+      var.rmax.name <- var.rmax[var.rmax %in% colnames(OutputT2)] # Reordering the columns in the data frame named 'OutputT2'
+
+      var.pop <- c("popsizeT", "min.popT", "max.popT", "mean.popT", "sd.popT")
+      var.pop.name <- var.pop[var.pop %in% colnames(OutputT2)]
+
+      var.harv <- c("min.harvestT", "max.harvestT", "mean.harvestT", "sd.harvestT")
+      var.harv.name <- var.harv[var.harv %in% colnames(OutputT2)]
+
+      reorder <- c("SP", "Nsim", "Fobj", var.rmax.name, "popsize", var.pop.name, "harvest", var.harv.name) # Final order of the columns wanted in the final output
+      OutputT2 <- data.frame(OutputT2[, reorder]) # Reordering the columns in the data frame named 'OutputT2'
+
+      # Step 10 : Saving all the datas from the 'OutputT2' in the data frame named 'Output2' ----
+      Output2 <- rbind(Output2, OutputT2) # Combin by rows all temporary data frame 'OutputT2' for each index a of the loop and saving in the data frame 'Output2'
+
+    } # End of loop b (according the objective factor)
+
+  } # End of loop a (according the number of species studied)
+
+
+
+  ## Step 11 : Saving all the results in a unique data frame named 'full.tab' ----
+  if(exists("OutputT1")){ # If the 'OutputT1' exixts then :
+    Output1 <- Output1[, !colnames(Output1) == "Nsim"] # Removing 'Nsim' columns in the 'Output1' because it already exists in the Output2
+    full.tab <- cbind(Output2[,1:3], Output1, Output2[4:ncol(Output2)] ) # Combining by columns the data frames 'Output1' and 'Output2' and saving in the data frame 'full.tab'
+  }else{ # If the OutputT1' does not exixts then :
+    full.tab <- Output2 # The data frame 'Output2' become the data frame 'full.tab'
+  }
+
+
+
+  ## Step 12 : Renaming colums ----
+  # The two lines of code below code removes the 'T' at the end of the columns when it exists
+  cond<-which(substr(colnames(full.tab), nchar(colnames(full.tab)),  nchar(colnames(full.tab)))=="T")
+  colnames(full.tab)[cond]<-substr(colnames(full.tab)[cond], 1, nchar(colnames(full.tab)[cond])-1)
+  colnames(full.tab)[colnames(full.tab)=="Nsim"] <- "Sim"
+  colnames(full.tab)[colnames(full.tab)=="Rmax.calc"] <- "Rmax"
+
+
+  ## Step 13 : Final calculations ----
+  # Generation of estimated variable of 'theta' ----
+  if(!is.na(theta.fixedT)){
+    full.tab$theta <- theta.fixedT
+  }
+  if(!is.na(estim.thetaT) && estim.thetaT == "determinist"){
+  full.tab$theta<-exp(1.129-1.824*full.tab$Rmax)
+  }
+  if(!is.na(estim.thetaT) && estim.thetaT == "random") {
+  full.tab$e.density<-rnorm(n=Nsim,mean=0, sd=sqrt(0.942))
+  full.tab$theta<-exp(1.129-1.824*full.tab$Rmax+full.tab$e.density)
+  }
+
+  # Calculations of PTL ----
+  PTL.rate <- full.tab$Fobj*(full.tab$Rmax*full.tab$theta)/(1+full.tab$theta)
+  full.tab$PTL <- PTL.rate * full.tab$popsize
+
+  # Calculation of SHI ----
+  full.tab$SHI <- full.tab$harvest/full.tab$PTL
+
+
+
+  ## Step 14 : Formatting of the final data frame named 'final.tab'
+  if(!isTRUE(full.option)){ # If the argument 'full.option' is FALSE then the final data frame named 'final.tab' is in the form with the minimum of necessary columns
+    final.tab <- data.frame(SP = full.tab$SP, Sim = full.tab$Sim, Fobj = full.tab$Fobj,
+                            Rmax = full.tab$Rmax, popsize = full.tab$popsize, theta = full.tab$theta, harvest = full.tab$harvest,
+                            PTL = full.tab$PTL, SHI = full.tab$SHI)
+  }else{final.tab <- full.tab} # If the argument 'full.option' is TRUE then the final data frame named 'final.tab' is the form with all values of parameters used for the calculations
+
+
+
+  ## Step 15 :  Removing of the temporary vectors
+  suppressWarnings(rm(OutputT1, OutputT2, surv.fixedT, mean.survT, sd.survT, mass.fixedT, mean.massT, sd.massT,
+     type.pT, type.eT, alpha.fixedT, min.alphaT, max.alphaT, mean.alphaT, sd.alphaT, theta.fixedT, Rmax.fixedT, mean.RmaxT, sd.RmaxT,
+     lambdaMax.fixedT, mean.lambdaMaxT, sd.lambdaMaxT, harvest.fixedT, min.harvestT, max.harvestT, mean.harvestT, sd.harvestT,
+     pop.fixedT, min.popT, max.popT, mean.popT, sd.popT))
+
+  return(final.tab)
+
+
+  } # End of function
