@@ -1,15 +1,11 @@
-<center> <h1> popharvest package in R</h1> </center>
+<h1> popharvest package in R</h1>
 
 
-<center> Made by Tiphaine DEVAUX, Maxime LAHOURNAT, Alexandre VILLERS, Cyril ERAUD, Charlotte FRANCESIAZ </center>
+Made by Tiphaine DEVAUX, Maxime LAHOURNAT, Alexandre VILLERS, Cyril ERAUD, Charlotte FRANCESIAZ
 
 
-<center> Licence : GPL-3 </center>
+Last updated: April 2020
 
-
-<center> Last updated: April 2020 </center>
-
-<p>&nbsp; </p>
 
 # Install
 
