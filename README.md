@@ -7,7 +7,7 @@ Made by Tiphaine DEVAUX, Maxime LAHOURNAT, Alexandre VILLERS, Cyril ERAUD, Charl
 Last updated: April 2020
 
 
-# Install
+## Install
 
 ```{r eval = FALSE}
 > library(devtools)
