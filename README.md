@@ -1,6 +1,5 @@
-___
-<center> <h1>'popharvest' package in R</h1> </center>
-___
+<center> <h1> popharvest package in R</h1> </center>
+
 
 <center> Made by Tiphaine DEVAUX, Maxime LAHOURNAT, Alexandre VILLERS, Cyril ERAUD, Charlotte FRANCESIAZ </center>
 
@@ -14,6 +13,6 @@ ___
 
 ```{r eval = FALSE}
 > library(devtools)
-> install_github("popharvest/popharvest_R")
+> install_github("popharvest/popharvest")
 > library(popharvest)
 ```
