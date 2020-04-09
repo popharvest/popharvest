@@ -1,22 +1,3 @@
----
-title: ""
-output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{README}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
-bibliography: references.bib
----
-
-```{r, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>",
-  message = FALSE, 
-  warning=FALSE
-)
-```
-
 ___
 <center> <h1>'popharvest' package in R</h1> </center>
 ___
