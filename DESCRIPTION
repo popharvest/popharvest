@@ -1,0 +1,19 @@
+Package: popharvest
+Title: popharvest: Assessing the sustainability of harvesting regimes of bird populations
+Version: 1.0.0
+Authors@R: c(person("Tiphaine", "Devaux", email = "tiphaine-devaux@orange.fr", role = c("aut", "cre")), person("Maxime", "Lahournat", email = "blablabla@bla.fr", role = "aut"), person("Alexandre", "Villers", email = "blablabla@bla.fr", role = "ctb"), person("Cyril", "Eraud", email = "cyril.eraud@oncfs.gouv.fr", role = "aut"))
+Description: Compiles the approaches available to assess the sustainability of harvesting regimes of bird populations. This package uses Niel and Lebreton (2005) approach and Johnson et al. (2012) approach, based on the PBR model (Wade 1998).
+Depends: R (>= 3.1.0)
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+Imports: 
+    stats,
+    ggplot2,
+    gridExtra,
+    kableExtra,
+    stringr
+Suggests: 
+    knitr
+VignetteBuilder: knitr
+RoxygenNote: 7.0.2
