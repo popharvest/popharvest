@@ -1,5 +1,0 @@
-library(devtools)
-library(usethis)
-library(roxygen2)
-library(rmarkdown)
-library(qpdf)
