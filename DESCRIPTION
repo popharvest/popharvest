@@ -1,0 +1,19 @@
+Package: popharvest
+Title: popharvest : Assessing the sustainability of harvesting regimes of bird populations
+Version: 1.0.0
+Authors@R: c(person("Tiphaine", "Devaux", email = "tiphaine-devaux@orange.fr", role = c("aut", "cre")), person("Cyril", "Eraud", email = "cyril.eraud@ofb.gouv.fr", role = "aut"), person("Charlotte", "Francesiaz", email = "charlotte.francesiaz@ofb.gouv.fr", role = "aut"), person("Alexandre", "Villers", email = "alexandre.villers@ofb.gouv.fr", role = "ctb"), person("Maxime", "Lahournat", email = "lahournat.maxime@hotmail.fr", role = "ctb"))
+Description: Implements tools to assess the sustainability of harvesting regimes of bird populations when wildlife managers face limited demographic data. These tools include the Demographic Invariant Method (DIM) and the Potential Take Level (PTL) approach. See Wade (1998) < doi: 10.1111/j.1748-7692.1998.tb00688.x >, Niel and Lebreton (2005) <doi.org/10.1111/j.1523-1739.2005.00310.x>, Runge et al. (2009) <doi.org/10.2193/2008-090>, Johnson et al. (2012) < doi: 10.1890/11-1164.1>.
+Depends: R (>= 3.1.0)
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+Imports: 
+    stats,
+    ggplot2,
+    gridExtra,
+    kableExtra,
+    stringr
+Suggests: 
+    knitr
+VignetteBuilder: knitr
+RoxygenNote: 7.1.1
