@@ -204,7 +204,8 @@ output.summary <- function(data){
 
   ## Step 6 : Transpose the dataframe ----
   code <- as.character(Output$code) # Converte the values of the column named 'code' as a character string
-  code <- str_sub(code, 1, 3)  # Extracte a character string which informs the number of the 'SP'
+  #code <- str_sub(code, 1, 3)  # Extracte a character string which informs the number of the 'SP'
+  code <- strsplit(code, split="_")[[1]][1] #to deal with Nspecies > 9
   Output <- t(Output) # Transpose of the data frame named 'Output'
   Output <- as.data.frame(Output)  # Converte the matrix named 'Output' as a data frame
 
