@@ -162,7 +162,7 @@ PEG <- function(full.option = FALSE,
                         sd.mass = NULL,
                         type.p = NULL,
                         type.e = NULL,
-                        surv.j = 1,
+                        surv.j = NULL,
                         alpha.fixed = NULL,
                         alpha.unif = FALSE,
                         min.alpha = NULL,
@@ -491,7 +491,9 @@ PEG <- function(full.option = FALSE,
   }
 
 
-
+  
+  #Default value for surv.j to 1 if not provided by the user
+ if (is.null(surv.j)){ surv.j<-rep(1, NSp)}
 
 
   ## II.2. Arguments which must be specified (together) ----
