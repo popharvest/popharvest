@@ -519,7 +519,7 @@ PTL <- function(full.option = FALSE,
   }
 
 
-  Add an extra line to create a vector for default value(s) of surv.j of the same length as NSp
+  #Add an extra line to create a vector for default value(s) of surv.j of the same length as NSp
   #Default value for surv.j to 1 if not provided
   if (is.null(surv.j)){ surv.j<-rep(1, NSp)}
 
