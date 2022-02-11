@@ -197,6 +197,10 @@ PTL <- function(full.option = FALSE,
                 theta.fixed = NULL,
                 estim.theta = NULL
 ) {
+  ##PREAMBULE
+   #Default value for surv.j to 1 if not provided, of length=Nsp
+  if (is.null(surv.j)){ surv.j<-rep(1, NSp)}
+  
   ## I. Error messages about vector type ----
   # Print error messages if the vector types of the datas are not correct
   if(!is.null(Nsim) && !is.numeric(Nsim)){ # If 'Nsim' argument is not null and it is not a numeric vector then print an error message
@@ -446,6 +450,10 @@ PTL <- function(full.option = FALSE,
     stop("'surv.fixed' and arguments to estimate survival based on body mass can not be specified together")
   }
 
+  if(length(surv.j)!=NSp){
+    stop("the length of 'surv.j' argument must equal 'NSp'")
+    }
+  
   ## mass arguments
   if(!is.null(mass.fixed) && (isTRUE(mass.lognorm)
                             || !is.null(mean.mass)
@@ -519,9 +527,7 @@ PTL <- function(full.option = FALSE,
   }
 
 
-  #Add an extra line to create a vector for default value(s) of surv.j of the same length as NSp
-  #Default value for surv.j to 1 if not provided
-  if (is.null(surv.j)){ surv.j<-rep(1, NSp)}
+
 
 
   ## II.2. Arguments which must be specified (together) ----
