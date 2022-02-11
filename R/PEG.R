@@ -186,6 +186,11 @@ PEG <- function(full.option = FALSE,
                         mean.pop = NULL,
                         sd.pop = NULL
 ){
+  
+  ##PREAMBULE
+  #Default value for surv.j to 1 if not provided by the user
+ if (is.null(surv.j)){ surv.j<-rep(1, NSp)}
+  
   ## I. Error messages about vector type ----
   # Print error messages if the vector types of the datas are not correct
   if(!is.null(Nsim) && !is.numeric(Nsim)){ # If 'Nsim' argument is not null and it is not a numeric vector then print an error message
@@ -427,6 +432,10 @@ PEG <- function(full.option = FALSE,
     stop("'surv.fixed' and arguments to estimate survival based on body mass can not be specified together")
   }
 
+  if(length(surv.j)!=NSp){
+    stop("the length of 'surv.j' argument must equal 'NSp'")
+   }
+  
   ## mass arguments
   if(!is.null(mass.fixed) && (isTRUE(mass.lognorm)
                               || !is.null(mean.mass)
@@ -492,8 +501,7 @@ PEG <- function(full.option = FALSE,
 
 
   
-  #Default value for surv.j to 1 if not provided by the user
- if (is.null(surv.j)){ surv.j<-rep(1, NSp)}
+
 
 
   ## II.2. Arguments which must be specified (together) ----
