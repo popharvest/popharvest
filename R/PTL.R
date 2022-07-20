@@ -899,16 +899,26 @@ PTL <- function(full.option = FALSE,
 
 
       # Step 8 : Generation of estimated variable of 'theta' ----
+      # New code added 2022-07-20
+
+      if(exists("OutputT1")){ # If the 'OutputT1' exixts then :
+        Rmax.temp <- OutputT1$Rmax # Takes the Rmax value calculated from the "rmax" function
+                }else{ # If the OutputT1' does not exixts then :
+        Rmax.temp <- Rmax.calc # Takes Rmax calculated from fixed values (including from "lambdaMax.fixed")
+      }
+
       theta <- NA
       e.density <- NA
+
       if(!is.na(estim.thetaT) && estim.thetaT == "determinist"){
         e.density<- 0
-        theta<-exp(1.129-1.824*OutputT1$Rmax)
+        theta<-exp(1.129-1.824*Rmax.temp) # 20/07/2022: old "OutpuT1$Rmax" parameter changed by "Rmax.temp"
       }
       if(!is.na(estim.thetaT) && estim.thetaT == "random") {
         e.density<-rnorm(n=Nsim,mean=0, sd=sqrt(0.942))
-        theta<-exp(1.129-1.824*OutputT1$Rmax+e.density)
+        theta<-exp(1.129-1.824*Rmax.temp+e.density) # 20/07/2022: old "OutpuT1$Rmax" parameter changed by "Rmax.temp"
       }
+
 
 
       ## Step 9 : Complementary columns for the 'OutputT2'----
