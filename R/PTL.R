@@ -339,19 +339,19 @@ PTL <- function(full.option = FALSE,
                               || !is.null(sd.Rmax))){
     stop("'Rmax.fixed' argument and 'Rmax' arguments for normal distribution can not be specified together")
   }
-  if(!is.null(Rmax.fixed)
+  if((!is.null(Rmax.fixed)
      || isTRUE(Rmax.lognorm)
      || !is.null(mean.Rmax)
-     || !is.null(sd.Rmax) && (!is.null(lambdaMax.fixed)
+     || !is.null(sd.Rmax)) && (!is.null(lambdaMax.fixed)
                               || isTRUE(lambdaMax.lognorm)
                               || !is.null(mean.lambdaMax)
-                              || !is.null(sd.lambdaMax))){
+                              || !is.null(sd.lambdaMax))){ #modified (line324-327) on 2022-07-20 : '()' added on the first set of conditions
     stop("'Rmax' arguments and 'Lambdamax' arguments can not be specified together")
   }
-  if(!is.null(Rmax.fixed)
+  if((!is.null(Rmax.fixed)
      || isTRUE(Rmax.lognorm)
      || !is.null(mean.Rmax)
-     || !is.null(sd.Rmax) && !is.null(living.rate)){
+     || !is.null(sd.Rmax)) && !is.null(living.rate)){ #modified (line351-354) on 2022-07-20 : '()' added on the first set of conditions
     stop("'Rmax' arguments and 'living.rate' arguments can not be specified together")
   }
   if((!is.null(Rmax.fixed)
@@ -821,9 +821,9 @@ PTL <- function(full.option = FALSE,
                          mean.surv = mean.survT,
                          sd.surv = sd.survT,
                          mass.fixed = mass.fixedT,
-                         mass.lognorm = FALSE,
+                         mass.lognorm = mass.lognorm, #modified on the 2022-07-20 (was set to FALSE)
                          mean.mass = mean.massT,
-                         sd.mass = mean.massT,
+                         sd.mass = sd.massT, #modified on the 2022-07-20 (was set to 'mean.massT')
                          type.p = type.pT,
                          type.e = type.eT,
                          surv.j = surv.jT,
